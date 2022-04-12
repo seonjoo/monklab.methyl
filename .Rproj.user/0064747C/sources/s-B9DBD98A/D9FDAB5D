@@ -1,0 +1,26 @@
+{
+    "id": "D9FDAB5D",
+    "path": "/Volumes/ALSPAC/Preproc_package/monklab.methyl/R/monk_proc_v1.R",
+    "project_path": "R/monk_proc_v1.R",
+    "type": "r_source",
+    "hash": "0",
+    "contents": "",
+    "dirty": false,
+    "created": 1649726417868.0,
+    "source_on_save": false,
+    "relative_order": 1,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "23,16",
+        "scrollLine": "20"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1649726511,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1649726511008,
+    "read_only": false,
+    "read_only_alternatives": []
+}
