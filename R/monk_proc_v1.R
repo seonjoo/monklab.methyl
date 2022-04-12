@@ -1,6 +1,7 @@
 #' DMN methylation preprocessing
 #' Epi 450K Data Pre-processing is first established on June 10, 2021 By Pamela Scorza
 #' Version 1 monk preprocessing Last update: 2022 04 08
+#' @param WB methylation file imported by minfi package
 #' @param idatpath idat file path
 #' @param targetfile sample information file. This must include Basename field that include idat_id
 #' @param probthresh 0.01 (default) p-value threshold to filter out significantly methylation CPG sites.
@@ -16,68 +17,24 @@
 #' #targets <- readxl::read_excel("/Volumes/ALSPAC/EPI/EPI_methylation_rawdata_froam_ben_2019_12_20/monk_sample_450K_placenta.xlsx")
 #' #targetfile=targets[1:5,c(1,2,3,4,11,12,13,14,15,17)]
 #' #targetfile$Basename <- targetfile$idat_id#paste0(targets$sentrixbarcode, "_", targets$samplesection) # name of the files
+#' #WB <- read.metharray.exp(base=idatPath, targets=targetfile, verbose=T) # read the idat file one by one
+
 #' #monk_proc_v1(idatpath,targetfile,probthresh=0.01,outfilename='monkproc_v1_test')
-monk_proc_v1<-function(idatpath,
-                    targetfile,
-                    probthresh=0.01, # p.detect threshold of the bad probes
-                    outfilename='monkproc_v1'
+monk_proc_v1<-function(WB,
+                       idatpath=NULL,
+                       targetfile=NULL,
+                       probthresh=0.01, # p.detect threshold of the bad probes
+                       outfilename='monkproc_v1'
                     ){
 
 
   ######################################################################
   ###################Reading in idat files##############################
   ######################################################################
-  WB <- read.metharray.exp(base=idatPath, targets=targetfile, verbose=T) # read the idat file one by one
 
   cat(paste('Number of the imported methylation samples: ',ncol(WB), '\n'))
 
-  cat('##############QUALITY CONTROL#################')
-
-  ewas_meth <- read_idats( paste(idatPath,'/',targetfile$Basename,sep=''), quiet=F)
-  ###################ILLUMINA QC Control Check#########3
-
-  # The name of the platform (450K/EPIC)
-  cat(paste('Platform:', ewas_meth$platform,'\n'))
-
-  #Looking for failed samples
-  targetfile$failed <- sample_failure(control_metrics(ewas_meth))
-
-  cat('Number of Failed samples: \n')
-  table(targetfile$failed, useNA='ifany')
-  print(targetfile %>% filter(failed==TRUE))
-
-
-  #' Here we see that two samples failed: 9285451058_R01C01 and 9285451058_R06C02
-  if (sum(targetfile$failed==TRUE)>0){
-    re=lapply(targetfile$Basename[targetfile$failed==TRUE], function(str){
-      tmp=control_metrics(read_idats(paste(idatPath,'/',str,sep=''), quiet=TRUE))
-      tmpdat=as.data.frame(tmp)
-      row.names(tmpdat)=str
-      return(list(tmp,tmpdat))
-    })
-
-    # below threshold will be considered as problematic.
-    contromat=data.frame(threshold=(unlist(lapply(re[[1]][[1]], attributes))),
-               t(do.call(rbind, lapply(re,function(xx)xx[[2]]))))
-    contromat_count = apply(as.matrix(contromat[,-1]),2, function(x)sum(x<contromat[,1]))
-    paste(names(contromat)[-1], contromat_count)
-
-    failedindx = which(targetfile$failed==TRUE)
-    cat(paste('Excluded Failed Sample: ',targets$Basename[failedindx], '\n'))
-
-    WB <- WB[,-which(targetfile$failed==TRUE)]
-    targetfile=targetfile[-which(targetfile$failed==TRUE),]
-  }
-
-    cat(paste('Number of methylation data:',ncol(WB),'\n'))
-
-
-  cat('# Preprocess the data - this removes technical variation\n')
-
-  cat('# "Normal out of band background" (Noob) within-sample correction - see [Triche et al 2013](http://www.ncbi.nlm.nih.gov/pmc/articles/PMC3627582/)\n')
-
   WB.noob <- preprocessNoob(WB)
-
 
   cat('# Distribution of beta-values: before and after noob normalization\n')
 
@@ -132,7 +89,7 @@ monk_proc_v1<-function(idatpath,
 
   # Filter bad probes from our methylset
 
-  nrow(WB.noob)
+  #nrow(WB.noob)
   WB.noob <- WB.noob[rownames(getAnnotation(WB.noob)) %in% intersect,]
   nrow(WB.noob)
   rm(intersect, detect.p); gc() # cleanup
@@ -141,11 +98,10 @@ monk_proc_v1<-function(idatpath,
   cat('#####################Probe type adjustment############################\n')
   cat('######################################################################\n')
 
-  #' Need to adjust for probe-type bias Infinium I (type I) and Infinium II (type II) probes
-  #' RCP with EnMix: Regression on Correlated Probes [Niu et al. Bioinformatics 2016](http://www.ncbi.nlm.nih.gov/pubmed/27153672)
+  cat('# Need to adjust for probe-type bias Infinium I (type I) and Infinium II (type II) probes\n')
+  cat('# RCP with EnMix: Regression on Correlated Probes [Niu et al. Bioinformatics 2016](http://www.ncbi.nlm.nih.gov/pubmed/27153672)\n')
   betas.rcp <- rcp(WB.noob)
-  #' note that this package takes beta values out of the minfi object - result is a matrix
-
+  cat('# note that this package takes beta values out of the minfi object - result is a matrix\n')
 
 
   ## Annotation of Infinium type for each probe (I vs II)
@@ -183,7 +139,9 @@ monk_proc_v1<-function(idatpath,
   pData(WB.noob)$Sentrix_ID <- unlist(lapply(colnames(WB.noob), function(ss)strsplit(ss,'_')[[1]][1]))
   pData(WB.noob)$array_row <- substring(unlist(lapply(colnames(WB.noob), function(ss)strsplit(ss,'_')[[1]][2])),1,3) #Chip row
   pData(WB.noob)$array_col <- substring(unlist(lapply(colnames(WB.noob), function(ss)strsplit(ss,'_')[[1]][2])),4,7) #Chip row #Chip position
-  #and just chip (Sentrix_ID)
+  pData(WB.noob)$array_rowcol <- substring(unlist(lapply(colnames(WB.noob), function(ss)strsplit(ss,'_')[[1]][2])),1,7)
+
+    #and just chip (Sentrix_ID)
 
   #' ## Principal Component Analysis (PCA)
   #' Calculate major sources of variability of DNA methylation using PCA
@@ -192,8 +150,8 @@ monk_proc_v1<-function(idatpath,
   PCs <- PCobject$x
 
   #' Is the major source of variability associated with position on chip?
-  summary(lm(PCs[, 1] ~ pData(WB.noob)$array_row)) #some effects w/row
-  #summary(lm(PCs[, 1] ~ pData(WB.noob)$array_col)) #no effects w/col
+#  summary(lm(PCs[, 1] ~ pData(WB.noob)$array_row)) #some effects w/row
+#  summary(lm(PCs[, 1] ~ pData(WB.noob)$array_col)) #no effects w/col
   oneway.test(PCs[, 1] ~ as.factor(pData(WB.noob)$Sentrix_ID)) #
   oneway.test(PCs[, 1] ~ as.factor(pData(WB.noob)$array_row)) #
 
@@ -201,27 +159,57 @@ monk_proc_v1<-function(idatpath,
 
   #' ComBat eBayes adjustment using a known variable of interest (here we use row)
   Mvals <- log2(betas.rcp)-log2(1-betas.rcp)
-  Mvals.ComBat <- ComBat(Mvals, batch = pData(WB.noob)$array_row)
+
+  combatoption=menu(c("row", "col", 'both', 'none'), title="Which batch effect correction?")
+  if (combatoption==1){
+    cat('only correct for rows.\n')
+    Mvals.ComBat <- ComBat(Mvals, batch = pData(WB.noob)$array_row)
+
+  }
+  if (combatoption==2){
+    cat('only correct for columns.\n')
+    Mvals.ComBat <- ComBat(Mvals, batch = pData(WB.noob)$array_col)
+
+  }
+  if (combatoption==3){
+    cat('both columns and raws\n')
+    Mvals.ComBat <- ComBat(Mvals, batch = pData(WB.noob)$array_rowcol)
+
+  }
+  if (combatoption==4){
+    cat('No position effect correction.\n')
+    Mvals.ComBat <- Mvals
+  }
+
   betas.rcp <- 2^Mvals.ComBat/(1+2^Mvals.ComBat) # Convert M-values back to beta-values
 
   #' PCA after removing batch effects
-  PC_post_row_correction <- prcomp(t(betas.rcp), retx = T, center = T, scale. = T)
-  PC1_post_row_correction <- PC_post_row_correction$x
+  PC_post_correction <- prcomp(t(betas.rcp), retx = T, center = T, scale. = T)
+  PC1_post_correction <- PC_post_correction$x
 
-  summary(lm(PC1_post_row_correction[, 1] ~ pData(WB.noob)$array_row)) #some effects w/row
-  #summary(lm(PC1_post_row_correction[, 1] ~ pData(WB.noob)$array_col)) #no effects w/col
-  oneway.test(PC1_post_row_correction[, 1] ~ as.factor(pData(WB.noob)$Sentrix_ID)) #
-
-  #par(mfrow = c(1, 2))
-  boxplot(PC1_post_row_correction[, 1] ~ pData(WB.noob)$array_row, ylab = "PC1",las=2, main="Row",col=rainbow(8))
-  #boxplot(PC1_post_row_correction[, 1] ~ pData(WB.noob)$array_col, ylab = "PC1",las=2, main="Column",col=rainbow(8))
+  par(mfrow = c(1, 2))
+  boxplot(PC1_post_correction[, 1] ~ pData(WB.noob)$array_row, ylab = "PC1",las=2, main="Row",col=rainbow(8))
+  boxplot(PC1_post_correction[, 1] ~ pData(WB.noob)$array_col, ylab = "PC1",las=2, main="Column",col=rainbow(8))
 
   #'By Beadchip
+  oneway.test(PC1_post_correction[, 1] ~ as.factor(pData(WB.noob)$Sentrix_ID)) #
+
+  table(pData(WB.noob)$Sentrix_ID)
+
   par(mfrow = c(1, 1))
-  boxplot(PC1_post_row_correction[, 1] ~ pData(WB.noob)$Sentrix_ID, ylab = "PC1",las=2, main="Chip",col=rainbow(8))
+  boxplot(PC1_post_correction[, 1] ~ pData(WB.noob)$Sentrix_ID, ylab = "PC1",las=2, main="Chip",col=rainbow(8))
 
+  chipmenu=menu(c("no","yes"), title="Batch correction for chips?")
+  if (chipmenu==1){
+    cat('No chip correction.\n')
+  }
+  if (chipmenu==2){
+    cat('Chip correction.\n')
+    Mvals.ComBat <- ComBat(Mvals.ComBat, batch = pData(WB.noob)$Sentrix_ID)
+    betas.rcp <- 2^Mvals.ComBat/(1+2^Mvals.ComBat) # Convert M-values back to beta-values
+  }
 
-  rm(PCs, PCobject, PC_post_row_correction, PC1_post_row_correction); gc()
+  rm(PCs, PCobject, PC_post_correction, PC1_post_correction); gc()
 
 
   cat('######################################################################\n')
