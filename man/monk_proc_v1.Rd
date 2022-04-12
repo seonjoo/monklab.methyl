@@ -7,13 +7,16 @@ Epi 450K Data Pre-processing is first established on June 10, 2021 By Pamela Sco
 Version 1 monk preprocessing Last update: 2022 04 08}
 \usage{
 monk_proc_v1(
-  idatpath,
-  targetfile,
+  WB,
+  idatpath = NULL,
+  targetfile = NULL,
   probthresh = 0.01,
   outfilename = "monkproc_v1"
 )
 }
 \arguments{
+\item{WB}{methylation file imported by minfi package}
+
 \item{idatpath}{idat file path}
 
 \item{targetfile}{sample information file. This must include Basename field that include idat_id}
@@ -37,16 +40,13 @@ Version 1 monk preprocessing Last update: 2022 04 08
 #targets <- readxl::read_excel("/Volumes/ALSPAC/EPI/EPI_methylation_rawdata_froam_ben_2019_12_20/monk_sample_450K_placenta.xlsx")
 #targetfile=targets[1:5,c(1,2,3,4,11,12,13,14,15,17)]
 #targetfile$Basename <- targetfile$idat_id#paste0(targets$sentrixbarcode, "_", targets$samplesection) # name of the files
+#WB <- read.metharray.exp(base=idatPath, targets=targetfile, verbose=T) # read the idat file one by one
 #monk_proc_v1(idatpath,targetfile,probthresh=0.01,outfilename='monkproc_v1_test')
-Here we see that two samples failed: 9285451058_R01C01 and 9285451058_R06C02
 Distribution of beta-values: before and after noob normalization
 notice the blue density traces (raw) are more spread out; background correction brings them together
 
 Barplot of the mean detection p-value by sample
 This tells us something (??) about the sample
-Need to adjust for probe-type bias Infinium I (type I) and Infinium II (type II) probes
-RCP with EnMix: Regression on Correlated Probes [Niu et al. Bioinformatics 2016](http://www.ncbi.nlm.nih.gov/pubmed/27153672)
-note that this package takes beta values out of the minfi object - result is a matrix
 notice that the type I and II peaks are more closely aligned after rcp adjustment
 (particularly in the higher peak)
 ## Batch effects

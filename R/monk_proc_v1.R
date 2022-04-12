@@ -9,7 +9,7 @@
 #'
 #' @return The resulting beta
 #' @export
-#' @import minfi ENmix sva DMRcate ewastools dplyr
+#' @import minfi ENmix sva DMRcate dplyr
 #' @examples
 #' #library(monklab.methyl)
 #' #library(dplyr)

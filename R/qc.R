@@ -10,7 +10,7 @@
 #'
 #' @return qc index
 #' @export
-#' @import minfi ewastools dplyr
+#' @import minfi ewastools dplyr knitr
 #' @examples
 qc<-function(WB=NULL,
              idatpath=NULL,
