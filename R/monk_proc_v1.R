@@ -1,15 +1,22 @@
 #' DMN methylation preprocessing
-#'
-#' @param idatpath
-#' @param targetfile
-#' @param probthresh
-#' @param outfilename
+#' Epi 450K Data Pre-processing is first established on June 10, 2021 By Pamela Scorza
+#' Version 1 monk preprocessing Last update: 2022 04 08
+#' @param idatpath idat file path
+#' @param targetfile sample information file. This must include Basename field that include idat_id
+#' @param probthresh 0.01 (default) p-value threshold to filter out significantly methylation CPG sites.
+#' @param outfilename monkproc_v1 (devault) output file name
 #'
 #' @return The resulting beta
 #' @export
-#' @import minfi ENmix limma reshape scales sva DMRcate ewastools readxl
+#' @import minfi ENmix sva DMRcate ewastools dplyr
 #' @examples
-#'
+#' #library(monklab.methyl)
+#' #library(dplyr)
+#' #idatPath <- "/Volumes/ALSPAC/EPI/EPI_methylation_rawdata_froam_ben_2019_12_20/idat" # path of the folder
+#' #targets <- readxl::read_excel("/Volumes/ALSPAC/EPI/EPI_methylation_rawdata_froam_ben_2019_12_20/monk_sample_450K_placenta.xlsx")
+#' #targetfile=targets[1:5,c(1,2,3,4,11,12,13,14,15,17)]
+#' #targetfile$Basename <- targetfile$idat_id#paste0(targets$sentrixbarcode, "_", targets$samplesection) # name of the files
+#' #monk_proc_v1(idatpath,targetfile,probthresh=0.01,outfilename='monkproc_v1_test')
 monk_proc_v1<-function(idatpath,
                     targetfile,
                     probthresh=0.01, # p.detect threshold of the bad probes
@@ -17,40 +24,14 @@ monk_proc_v1<-function(idatpath,
                     ){
 
 
-  # Epi 450K Data Pre-processing
-  #June 10, 2021
-  # By Pamela Scorza
-
-  library(minfi) # popular package for methylation data
-#  library(matrixStats) # for calculating summary statistics
-  library(ENmix) # probe type adjustment "rcp"
-  library(limma) # for MDS plots
-  library(reshape, scales) # reshape data and graphig
-  library(sva) # for addressing batch effects
-  library(DMRcate)
-#  library(shinyMethyl)
-  #devtools::install_github("hhhh5/ewastools")
-  library(ewastools)
-#  library(stringi)
-#  library(magrittr)
-#  library(data.table)
-#  library(svd)
-  library(readxl)
-  library(tibble)
-
-
-
-  ## Version 1 monk preprocessing
-  ## Last update: 2022 04 08
-
   ######################################################################
   ###################Reading in idat files##############################
   ######################################################################
   WB <- read.metharray.exp(base=idatPath, targets=targetfile, verbose=T) # read the idat file one by one
-  ncol(WB)
 
+  cat(paste('Number of the imported methylation samples: ',ncol(WB), '\n'))
 
-  ##############QUALITY CONTROL#################3
+  cat('##############QUALITY CONTROL#################')
 
   ewas_meth <- read_idats( paste(idatPath,'/',targetfile$Basename,sep=''), quiet=F)
   ###################ILLUMINA QC Control Check#########3
@@ -61,7 +42,7 @@ monk_proc_v1<-function(idatpath,
   #Looking for failed samples
   targetfile$failed <- sample_failure(control_metrics(ewas_meth))
 
-  cat('Number of Failed samples\n')
+  cat('Number of Failed samples: \n')
   table(targetfile$failed, useNA='ifany')
   print(targetfile %>% filter(failed==TRUE))
 
@@ -91,18 +72,19 @@ monk_proc_v1<-function(idatpath,
     cat(paste('Number of methylation data:',ncol(WB),'\n'))
 
 
-  # Preprocess the data - this removes technical variation
+  cat('# Preprocess the data - this removes technical variation\n')
 
-  # "Normal out of band background" (Noob) within-sample correction - see [Triche et al 2013](http://www.ncbi.nlm.nih.gov/pmc/articles/PMC3627582/)
+  cat('# "Normal out of band background" (Noob) within-sample correction - see [Triche et al 2013](http://www.ncbi.nlm.nih.gov/pmc/articles/PMC3627582/)\n')
 
   WB.noob <- preprocessNoob(WB)
 
 
-  # Distribution of beta-values: before and after noob normalization
+  cat('# Distribution of beta-values: before and after noob normalization\n')
 
   #############FIGURE 1######################
   #' Distribution of beta-values: before and after noob normalization
   #+ fig.width=8, fig.height=6, dpi=300
+  #+
   densityPlot(WB, main = "density plots before and after preprocessing", pal="#440154FF", ylim=c(0,4.5))
   densityPlot(WB.noob, add = F, pal = "#FDE725FF")
   # Add legend
@@ -112,7 +94,7 @@ monk_proc_v1<-function(idatpath,
   #' notice the blue density traces (raw) are more spread out; background correction brings them together
   #'
 
-  ## Remove Bad/Failed Probe
+  cat('## Remove Bad/Failed Probe')
 
   # We want to drop probes with intensity that is not significantly above background signal (from negative control probes)
 
@@ -143,7 +125,9 @@ monk_proc_v1<-function(idatpath,
   intersect <- intersect(rownames(getAnnotation(WB)), rownames(detect.p))
 
 
-  cat(paste('Started with', nrow(getAnnotation(WB)), 'probes and', length(intersect),' remaining if we use', probthresh,'as cutoff. Removed',nrow(getAnnotation(WB))-length(intersect),'probes', round(100 - length(intersect)/nrow(getAnnotation(WB))*100,2), '%'))
+  cat(paste('Started with', nrow(getAnnotation(WB)), 'probes and', length(intersect),
+            ' remaining if we use', probthresh,'as cutoff. Removed',nrow(getAnnotation(WB))-length(intersect),'probes',
+            round(100 - length(intersect)/nrow(getAnnotation(WB))*100,2), '%\n'))
 
 
   # Filter bad probes from our methylset
@@ -153,9 +137,9 @@ monk_proc_v1<-function(idatpath,
   nrow(WB.noob)
   rm(intersect, detect.p); gc() # cleanup
 
-  ######################################################################
-  #####################Probe type adjustment############################
-  ######################################################################
+  cat('######################################################################\n')
+  cat('#####################Probe type adjustment############################\n')
+  cat('######################################################################\n')
 
   #' Need to adjust for probe-type bias Infinium I (type I) and Infinium II (type II) probes
   #' RCP with EnMix: Regression on Correlated Probes [Niu et al. Bioinformatics 2016](http://www.ncbi.nlm.nih.gov/pubmed/27153672)
@@ -171,7 +155,7 @@ monk_proc_v1<-function(idatpath,
   onetwo[rownames(betas.rcp) %in% typeII] <- 2
 
 
-  #' Probe-type bias adjustment before and after RCP
+  cat('# Probe-type bias adjustment before and after RCP\n')
   #+ fig.width=15, fig.height=7, dpi=300
   par(mfrow=c(1,2)) # Side-by-side density distributions
   densityPlot(WB.noob[rownames(getAnnotation(WB.noob)) %in% typeI,],pal = "#FDE725FF",main='Beta density',ylim=c(0,6.5))
@@ -185,7 +169,7 @@ monk_proc_v1<-function(idatpath,
   #' (particularly in the higher peak)
   rm(onetwo, typeI, typeII)
 
-  ## Batch effects
+  cat('## Batch effects\n')
 
   ######################################################################
   ###########################Batch effects##############################
@@ -240,9 +224,9 @@ monk_proc_v1<-function(idatpath,
   rm(PCs, PCobject, PC_post_row_correction, PC1_post_row_correction); gc()
 
 
-  ######################################################################
-  ########################Cross-Hybridizing#############################
-  ######################################################################
+  cat('######################################################################\n')
+  cat('########################Cross-Hybridizing#############################\n')
+  cat('######################################################################\n')
 
   betas.clean <- rmSNPandCH(betas.rcp,  mafcut = 0.05, and = TRUE, rmcrosshyb = TRUE, rmXY= FALSE)
   Mvals.clean <- log2(betas.clean)-log2(1-betas.clean)
@@ -250,6 +234,12 @@ monk_proc_v1<-function(idatpath,
   #saveRDS(betas.clean, file = "tcell_epic_n152_veronica_pamela_clean_betas.rds")
   #saveRDS(Mvals.clean, file = "tcell_epic_n152_veronica_pamela_Clean_mvals.rds")
 
+
   save(betas.clean, targetfile, file = outfilename)
 
+
+  cat(paste('The cleaned file was saved as', outfilename),'\n')
+
+
+  cat('Done!')
 }

@@ -1,0 +1,32 @@
+---
+title: "Placenta-Preprocessing"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Placenta-Preprocessing}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(monklab.methyl)
+library(dplyr)
+```
+
+# Placenta Data Processing
+```{r}
+idatPath <- "/Volumes/ALSPAC/EPI/EPI_methylation_rawdata_froam_ben_2019_12_20/idat" # path of the folder
+targets <- readxl::read_excel("/Volumes/ALSPAC/EPI/EPI_methylation_rawdata_froam_ben_2019_12_20/monk_sample_450K_placenta.xlsx")
+targetfile=targets[30,c(1,2,3,4,11,12,13,14,15,17)]
+targetfile$Basename <- targetfile$idat_id#paste0(targets$sentrixbarcode, "_", targets$samplesection) # name of the files
+
+monk_proc_v1(idatpath,targetfile,probthresh=0.01,outfilename='monkproc_v1_test')
+
+
+```
