@@ -48,7 +48,7 @@ qc<-function(WB=NULL,
 
     if (sum(minfi.qc$bad_methy=='Fail' | minfi.qc$bad_sex=='Fail' | is.na(minfi.qc$bad_methy) | is.na(minfi.qc$bad_methy)>0)){
       cat(paste(sum(minfi.qc$bad_methy=='Fail' | minfi.qc$bad_sex=='Fail'),'samples were identified as a bad sample.'))
-      knitr::kable(minfi.qc %>% filter(bad_methy=='Fail' | bad_sex=='Fail' | is.na(bad_methy) | is.na(bad_sex)))
+      (minfi.qc %>% filter(bad_methy=='Fail' | bad_sex=='Fail' | is.na(bad_methy) | is.na(bad_sex)))
 
     }else{cat('Nothing failed.\n')}
   }
@@ -71,18 +71,20 @@ qc<-function(WB=NULL,
 
     cat(paste('Number of Failed samples:',sum(targetfile$failed==TRUE),'out of ',nrow(targetfile),'samples. \n'))
  #  print(data.frame(contromat)[targetfile$failed==TRUE,])
+    threshold=t(unlist(lapply(cmat, attributes))) %>% data.frame(.) %>% reshape2::melt(.)
+    contromat=data.frame(id=targetfile$Basename,
+                         failed = targetfile$failed,
+                         failed.count = apply(as.matrix(data.frame(cmat)),1, function(x)sum(x<threshold$value)),
+                         data.frame(cmat),
+                         indx = 1:nrow(data.frame(cmat)))
 
+    write.csv(cbind(minfi.qc,contromat), file=paste(stt, '_qc_metrix.csv'), row.names=FALSE)
 
 #' Here we see that two samples failed: 9285451058_R01C01 and 9285451058_R06C02
     if (sum(targetfile$failed==TRUE)>0){
 
   # below threshold will be considered as problematic.
-      threshold=t(unlist(lapply(cmat, attributes))) %>% data.frame(.) %>% reshape2::melt(.)
-      contromat=data.frame(id=targetfile$Basename,
-                        failed = targetfile$failed,
-                        failed.count = apply(as.matrix(data.frame(cmat)),1, function(x)sum(x<threshold$value)),
-                        data.frame(cmat),
-                        indx = 1:nrow(data.frame(cmat)))
+
  #paste(names(contromat)[-1], contromat_count)
 
       failedindx = which(targetfile$failed==TRUE)
