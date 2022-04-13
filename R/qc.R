@@ -2,7 +2,7 @@
 #'
 #' @param WB
 #' @param idatpath
-#' @param targetfile
+#' @param targetfilepath path of idat files
 #' @param quiet F (default) do not print data import information.
 #' @param sexinfo NULL (if specified, we can compare the )
 #' @param minfiqc TRUE (default) run minfiqc
@@ -14,6 +14,7 @@
 #' @examples
 qc<-function(WB=NULL,
              idatpath=NULL,
+             targetfilepath=NULL,
              targetfile=NULL,
              quiet=F,
              sexinfo=NULL,
@@ -58,9 +59,9 @@ qc<-function(WB=NULL,
 
   if (ewastoolqc){
     if (quiet==F){
-      ewas_meth<-invisible(read_idats( paste(idatPath,'/',targetfile$Basename,sep=''), quiet=quiet))
+      ewas_meth<-invisible(read_idats( targetfilepath, quiet=quiet))
     }else{
-      ewas_meth<-read_idats( paste(idatPath,'/',targetfile$Basename,sep=''), quiet=T)
+      ewas_meth<-read_idats( targetfilepath, quiet=T)
     }
 ###################ILLUMINA QC Control Check#########3
 
