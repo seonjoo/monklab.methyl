@@ -80,7 +80,7 @@ qc<-function(WB=NULL,
                          data.frame(cmat),
                          indx = 1:nrow(data.frame(cmat)))
 
-    write.csv(cbind(minfi.qc,contromat), file=paste(stt, '_qc_metrix.csv'), row.names=FALSE)
+    write.csv(cbind(minfi.qc,contromat), file=paste(str, '_qc_metrix.csv'), row.names=FALSE)
 
 #' Here we see that two samples failed: 9285451058_R01C01 and 9285451058_R06C02
     if (sum(targetfile$failed==TRUE)>0){
