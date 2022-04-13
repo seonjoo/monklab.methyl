@@ -152,8 +152,8 @@ monk_proc_v1<-function(WB,
   cat('# Is the major source of variability associated with position on chip?')
 #  summary(lm(PCs[, 1] ~ pData(WB.noob)$array_row)) #some effects w/row
 #  summary(lm(PCs[, 1] ~ pData(WB.noob)$array_col)) #no effects w/col
-  print(oneway.test(PCs[, 1] ~ as.factor(pData(WB.noob)$Sentrix_ID))) #
-  print(oneway.test(PCs[, 1] ~ as.factor(pData(WB.noob)$array_row))) #
+  try(print(oneway.test(PCs[, 1] ~ as.factor(pData(WB.noob)$Sentrix_ID)))) #
+  try(print(oneway.test(PCs[, 1] ~ as.factor(pData(WB.noob)$array_row)))) #
   try(print(oneway.test(PCs[, 1] ~ as.factor(pData(WB.noob)$array_col)))) #
 
   print(boxplot(PCs[, 1] ~ pData(WB.noob)$array_row, ylab = "PC1",las=2, main="Row",col=rainbow(8)))
@@ -193,12 +193,12 @@ monk_proc_v1<-function(WB,
   boxplot(PC1_post_correction[, 1] ~ pData(WB.noob)$array_col, ylab = "PC1",las=2, main="Column",col=rainbow(8))
 
   #'By Beadchip
-  oneway.test(PC1_post_correction[, 1] ~ as.factor(pData(WB.noob)$Sentrix_ID)) #
+  try(print(oneway.test(PC1_post_correction[, 1] ~ as.factor(pData(WB.noob)$Sentrix_ID))))#
 
   table(pData(WB.noob)$Sentrix_ID)
 
   par(mfrow = c(1, 1))
-  boxplot(PC1_post_correction[, 1] ~ pData(WB.noob)$Sentrix_ID, ylab = "PC1",las=2, main="Chip",col=rainbow(8))
+  print(boxplot(PC1_post_correction[, 1] ~ pData(WB.noob)$Sentrix_ID, ylab = "PC1",las=2, main="Chip",col=rainbow(8)))
 
   chipmenu=menu(c("no","yes"), title="Batch correction for chips?")
   if (chipmenu==1){
