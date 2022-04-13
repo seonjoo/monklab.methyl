@@ -18,7 +18,8 @@ qc<-function(WB=NULL,
              quiet=F,
              sexinfo=NULL,
              minfiqc=TRUE,
-             ewastoolqc=TRUE
+             ewastoolqc=TRUE,
+             str='qc'
 
 ){
 
@@ -31,7 +32,11 @@ qc<-function(WB=NULL,
 
     MSet <- preprocessRaw(WB)
     out <- minfiQC(MSet)
-    a=plotQC(out$qc)
+
+    png( paste(str,'_fig1_minfi_qc.png',sep=''), width=400, height=400, res=100)
+    plotQC(out$qc)
+    dev.off()
+
   #  cat('##############SEX PREDICTION##################')
     minfi.qc = data.frame(out$qc)
     minfi.qc$truesex = sexinfo
@@ -76,7 +81,7 @@ qc<-function(WB=NULL,
                         failed = targetfile$failed,
                         failed.count = apply(as.matrix(data.frame(cmat)),1, function(x)sum(x<threshold$value)),
                         data.frame(cmat),
-                        indx = 1:nrow(cmat))
+                        indx = 1:nrow(data.frame(cmat)))
  #paste(names(contromat)[-1], contromat_count)
 
       failedindx = which(targetfile$failed==TRUE)

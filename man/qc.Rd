@@ -11,7 +11,8 @@ qc(
   quiet = F,
   sexinfo = NULL,
   minfiqc = TRUE,
-  ewastoolqc = TRUE
+  ewastoolqc = TRUE,
+  str = "qc"
 )
 }
 \arguments{
