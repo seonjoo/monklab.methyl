@@ -31,7 +31,8 @@ qc<-function(WB=NULL,
     cat('# badSampleCutoff = 10.5, below the line of -log2(Meth mediation intensity) + badSampleCutoff * 2\n')
 
     MSet <- preprocessRaw(WB)
-    out <- minfiQC(MSet)
+    out$qc <-  getQC(MSet)
+    out$qc$predictedSex = getSex(mapToGenome(MSet))$predictedSex
 
     png( paste(str,'_fig1_minfi_qc.png',sep=''), width=400, height=400, res=100)
     plotQC(out$qc)
