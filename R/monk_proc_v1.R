@@ -149,13 +149,13 @@ monk_proc_v1<-function(WB,
   #' Extract the Principal Components from SVD
   PCs <- PCobject$x
 
-  #' Is the major source of variability associated with position on chip?
+  cat('# Is the major source of variability associated with position on chip?')
 #  summary(lm(PCs[, 1] ~ pData(WB.noob)$array_row)) #some effects w/row
 #  summary(lm(PCs[, 1] ~ pData(WB.noob)$array_col)) #no effects w/col
-  oneway.test(PCs[, 1] ~ as.factor(pData(WB.noob)$Sentrix_ID)) #
-  oneway.test(PCs[, 1] ~ as.factor(pData(WB.noob)$array_row)) #
+  print(oneway.test(PCs[, 1] ~ as.factor(pData(WB.noob)$Sentrix_ID))) #
+  print(oneway.test(PCs[, 1] ~ as.factor(pData(WB.noob)$array_row))) #
 
-  boxplot(PCs[, 1] ~ pData(WB.noob)$array_row, ylab = "PC1",las=2, main="Row",col=rainbow(8))
+  print(boxplot(PCs[, 1] ~ pData(WB.noob)$array_row, ylab = "PC1",las=2, main="Row",col=rainbow(8)))
 
   #' ComBat eBayes adjustment using a known variable of interest (here we use row)
   Mvals <- log2(betas.rcp)-log2(1-betas.rcp)
