@@ -16,7 +16,8 @@ Imports:
 	sva, 
 	DMRcate, 
 	ewastools,
-	dplyr
+	dplyr,
+	knitr
 Suggests: 
     rmarkdown,
     knitr
