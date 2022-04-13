@@ -56,7 +56,6 @@ We will test 3 potential factors
 ## Principal Component Analysis (PCA)
 Calculate major sources of variability of DNA methylation using PCA
 Extract the Principal Components from SVD
-Is the major source of variability associated with position on chip?
 ComBat eBayes adjustment using a known variable of interest (here we use row)
 PCA after removing batch effects
 By Beadchip

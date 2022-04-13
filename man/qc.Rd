@@ -7,6 +7,7 @@
 qc(
   WB = NULL,
   idatpath = NULL,
+  targetfilepath = NULL,
   targetfile = NULL,
   quiet = F,
   sexinfo = NULL,
@@ -16,6 +17,8 @@ qc(
 )
 }
 \arguments{
+\item{targetfilepath}{path of idat files}
+
 \item{quiet}{F (default) do not print data import information.}
 
 \item{sexinfo}{NULL (if specified, we can compare the )}

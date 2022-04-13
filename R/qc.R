@@ -48,8 +48,8 @@ qc<-function(WB=NULL,
       dplyr::mutate(bad_sex = ifelse(predictedSex == truesex,'Pass','Fail')) %>%
       mutate(inex=1:nrow(minfi.qc))
 
-    if (sum(minfi.qc$bad_methy=='Fail' | minfi.qc$bad_sex=='Fail' | is.na(minfi.qc$bad_methy) | is.na(minfi.qc$bad_methy)>0)){
-      cat(paste(sum(minfi.qc$bad_methy=='Fail' | minfi.qc$bad_sex=='Fail'),'samples were identified as a bad sample.'))
+    if (sum(minfi.qc$bad_methy=='Fail' | minfi.qc$bad_sex=='Fail' | is.na(minfi.qc$bad_methy) | is.na(minfi.qc$bad_methy)>0, na.rm = TRUE)){
+      cat(paste(sum(minfi.qc$bad_methy=='Fail' | minfi.qc$bad_sex=='Fail', na.rm = TRUE),'samples were identified as a bad sample.'))
       (minfi.qc %>% filter(bad_methy=='Fail' | bad_sex=='Fail' | is.na(bad_methy) | is.na(bad_sex)))
 
     }else{cat('Nothing failed.\n')}
