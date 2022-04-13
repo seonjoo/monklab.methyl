@@ -31,6 +31,7 @@ qc<-function(WB=NULL,
     cat('# badSampleCutoff = 10.5, below the line of -log2(Meth mediation intensity) + badSampleCutoff * 2\n')
 
     MSet <- preprocessRaw(WB)
+    out=list()
     out$qc <-  getQC(MSet)
     out$qc$predictedSex = getSex(mapToGenome(MSet))$predictedSex
 
