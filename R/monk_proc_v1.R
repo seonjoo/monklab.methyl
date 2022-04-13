@@ -154,6 +154,7 @@ monk_proc_v1<-function(WB,
 #  summary(lm(PCs[, 1] ~ pData(WB.noob)$array_col)) #no effects w/col
   print(oneway.test(PCs[, 1] ~ as.factor(pData(WB.noob)$Sentrix_ID))) #
   print(oneway.test(PCs[, 1] ~ as.factor(pData(WB.noob)$array_row))) #
+  try(print(oneway.test(PCs[, 1] ~ as.factor(pData(WB.noob)$array_col)))) #
 
   print(boxplot(PCs[, 1] ~ pData(WB.noob)$array_row, ylab = "PC1",las=2, main="Row",col=rainbow(8)))
 
