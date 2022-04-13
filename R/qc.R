@@ -90,8 +90,8 @@ qc<-function(WB=NULL,
 
       threshold$variable=gsub('.threshold','',threshold$variable)
 
-      knitr::kable(cbind(t(contromat %>% filter(failed==TRUE)),
-                      c('threshold', '',' ',threshold$value)) , digits=2, full=FALSE)
+      cbind(t(contromat %>% filter(failed==TRUE)),
+                      c('threshold', '',' ',threshold$value))
 
     }
   }
