@@ -77,7 +77,7 @@ qc<-function(WB=NULL,
     threshold=t(unlist(lapply(cmat, attributes))) %>% data.frame(.) %>% reshape2::melt(.)
     contromat=data.frame(id=targetfile$Basename,
                          failed = targetfile$failed,
-                         failed.count = apply(as.matrix(data.frame(cmat)),1, function(x)sum(x<threshold$value)),
+                         failed.count = apply(as.matrix(data.frame(cmat)),1, function(x)sum(x<threshold$value, na.rm=TRUE)),
                          data.frame(cmat),
                          indx = 1:nrow(data.frame(cmat)))
 
