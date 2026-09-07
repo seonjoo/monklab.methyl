@@ -9,7 +9,6 @@ Description: More about what it does (maybe more than one line)
 License: What license is it under?
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.1.2
 Imports:
 	minfi, 
 	ENmix, 
@@ -24,3 +23,4 @@ Suggests:
 VignetteBuilder: knitr
 Depends: 
     R (>= 2.10)
+Config/roxygen2/version: 8.1.0
