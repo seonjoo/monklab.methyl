@@ -68,14 +68,13 @@ monk_proc_v2 <- function(WB,
 
   meta <- targetfile
 
-    # Assumes meta row order matches colnames(WB) — verify against your target file.
+  # Assumes meta row order matches colnames(WB) — verify against your target file.
 
   ## --- 17 BeadArray control metrics, extracted from WB's control probes ---
   ewas_meth<-read_idats( paste(idatPath, '/',targetfile$Basename,sep=''), quiet=T)
 
   cmat = control_metrics(ewas_meth)
   threshold=t(unlist(lapply(cmat, attributes))) %>% data.frame(.) %>% reshape2::melt(.)
-
 
   contromat=data.frame(id=targetfile$Basename,
 #                       failed = targetfile$failed,
