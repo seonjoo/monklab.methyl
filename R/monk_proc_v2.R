@@ -248,7 +248,9 @@ monk_proc_v2 <- function(WB,
   ## Probe-type bias correction (RCP)
   ######################################################################
   cat('# Probe-type bias correction: RCP (Niu et al., Bioinformatics 2016)\n')
-  betas.rcp <- rcp(as(WB.noob, "MethylSet"))
+  MSet_tmp <- MethylSet(Meth = getMeth(WB.noob), Unmeth = getUnmeth(WB.noob),
+                        colData = colData(WB.noob), annotation = annotation(WB.noob))
+  betas.rcp <- rcp(MSet_tmp)
 
   ######################################################################
   ## Batch effects
