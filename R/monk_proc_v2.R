@@ -24,7 +24,7 @@
 #'
 #' @return The resulting beta
 #' @export
-#' @import minfi ENmix sva DMRcate dplyr wateRmelon
+#' @import minfi ENmix sva DMRcate dplyr
 #' @examples
 #' #library(monklab.methyl)
 #' #library(dplyr)
@@ -48,115 +48,110 @@ monk_proc_v2 <- function(WB,
                          rmXY = FALSE,
                          sample_fail_fraction = 0.05,
                          median_intensity_cutoff = 10.5,
-                         outfilename = 'monkproc_v3'
+                         outfilename = 'monkproc_v2'
 ){
 
   ######################################################################
-  ## Detect array type — drives manifest, crosshyb list, and reporting
+  ## Detect array type
   ######################################################################
-  array_info <- minfi::annotation(WB)
-  array_type <- array_info["array"]
+  array_type <- minfi::annotation(WB)["array"]
   is_epic <- grepl("EPIC", array_type, ignore.case = TRUE)
 
-  cat("Start Mproc Preprocessing v3 (array-adaptive, Sep 2026 revision).\n")
+  cat("Start Mproc Preprocessing v2 (2026 09 02 revision).\n")
   cat(paste('Detected array type:', array_type, '\n'))
   cat(paste('Number of imported methylation samples:', ncol(WB), '\n'))
 
   ######################################################################
-  ## Sample-level QC
+  ## Sample-level QC — computed entirely from WB, no re-reading of IDATs
   ######################################################################
-
-  ## --- Step 1: BeadArray Controls Reporter metrics (17 metrics; fail if >=2 fail) ---
-  cat('## Sample-level QC: BeadArray control metrics\n')
-
-  if (is.null(idatpath) || is.null(targetfile)) {
-    stop("idatpath and targetfile must be provided to run BeadArray control metric QC.")
-  }
-  if (!requireNamespace("ewastools", quietly = TRUE)) {
-    stop("BeadArray control-metric QC requires the 'ewastools' package. ",
-         "Install via remotes::install_github('hhhh5/ewastools').")
-  }
+  cat('## Sample-level QC\n')
 
   meta <- read.csv(targetfile, stringsAsFactors = FALSE)
-  # Adjust "Basename" to match your target file's IDAT path-prefix column.
-  stopifnot("Basename" %in% colnames(meta))
 
-  raw_ewas <- ewastools::read_idats(meta$Basename, quiet = TRUE)
-  ctrl_metrics <- ewastools::control_metrics(raw_ewas)
-  ctrl_flags <- ewastools::sample_failure(ctrl_metrics)
+    # Assumes meta row order matches colnames(WB) — verify against your target file.
 
-  n_failed_metrics <- rowSums(ctrl_flags, na.rm = TRUE)
-  names(n_failed_metrics) <- meta$Basename
-  bcr_bad_samples <- names(n_failed_metrics)[n_failed_metrics >= 2]
+  ## --- 17 BeadArray control metrics, extracted from WB's control probes ---
+  ctrlInfo <- getProbeInfo(WB, type = "Control")
+  grn <- getGreen(WB)[ctrlInfo$Address, , drop = FALSE]
+  red <- getRed(WB)[ctrlInfo$Address, , drop = FALSE]
+  rownames(grn) <- rownames(red) <- ctrlInfo$Type
 
-  cat(paste(length(bcr_bad_samples),
-            'sample(s) failed >=2 of 17 BeadArray Controls Reporter metrics',
-            ifelse(length(bcr_bad_samples) > 0, paste0(': ', paste(bcr_bad_samples, collapse = ', ')), ''),
-            '\n'))
-
-  # Assumes meta row order corresponds to colnames(WB) — verify this join
-  # against your actual target file / sample naming convention.
-  bad_sample_ids <- colnames(WB)[meta$Basename %in% bcr_bad_samples]
-  if (length(bad_sample_ids) > 0) {
-    WB <- WB[, !(colnames(WB) %in% bad_sample_ids)]
-  }
-  rm(raw_ewas, ctrl_metrics, ctrl_flags); gc()
-
-  ## --- Step 2: detection p-value failure rate ---
-  cat('## Sample-level QC: flagging samples with excessive detection failure\n')
-
-  detP <- minfi::detectionP(WB)
-  sample_fail_rate <- colMeans(detP > probthresh)
-  bad_samples <- names(sample_fail_rate)[sample_fail_rate > sample_fail_fraction]
-
-  if (length(bad_samples) > 0) {
-    cat(paste(length(bad_samples), 'sample(s) exceed', sample_fail_fraction * 100,
-              '% probe failure rate:', paste(bad_samples, collapse = ', '), '\n'))
-    WB <- WB[, !(colnames(WB) %in% bad_samples)]
-    detP <- detP[, !(colnames(detP) %in% bad_samples), drop = FALSE]
-  } else {
-    cat('No samples flagged for detection p-value failure.\n')
+  ctrl_med <- function(type, mat) {
+    rows <- rownames(mat) == type
+    if (!any(rows)) return(rep(NA_real_, ncol(mat)))
+    apply(mat[rows, , drop = FALSE], 2, median, na.rm = TRUE)
   }
 
-  ## --- Step 3: median methylation intensity outliers ---
-  cat('## Sample-level QC: median methylation intensity outliers\n')
+  neg_grn <- ctrl_med("NEGATIVE", grn)
+  neg_red <- ctrl_med("NEGATIVE", red)
 
-  MSet_raw <- preprocessRaw(WB)
-  qc <- getQC(MSet_raw)
-  pData(WB)$mMed <- qc$mMed
-  pData(WB)$uMed <- qc$uMed
+  bcr <- data.frame(
+    Sample_ID                = colnames(WB),
+    Staining_Grn              = ctrl_med("STAINING", grn),
+    Staining_Red              = ctrl_med("STAINING", red),
+    Extension_Grn             = ctrl_med("EXTENSION", grn),
+    Extension_Red             = ctrl_med("EXTENSION", red),
+    Hybridization_Grn         = ctrl_med("HYBRIDIZATION", grn),
+    TargetRemoval_Grn         = ctrl_med("TARGET REMOVAL", grn),
+    BisulfiteI_Grn            = ctrl_med("BISULFITE CONVERSION I", grn),
+    BisulfiteI_Red            = ctrl_med("BISULFITE CONVERSION I", red),
+    BisulfiteII_Red           = ctrl_med("BISULFITE CONVERSION II", red),
+    SpecificityI_Grn          = ctrl_med("SPECIFICITY I", grn),
+    SpecificityI_Red          = ctrl_med("SPECIFICITY I", red),
+    SpecificityII_Red         = ctrl_med("SPECIFICITY II", red),
+    NonPolymorphic_Grn        = ctrl_med("NON-POLYMORPHIC", grn),
+    NonPolymorphic_Red        = ctrl_med("NON-POLYMORPHIC", red),
+    Restoration_Grn           = ctrl_med("RESTORATION", grn),
+    Negative_Grn               = neg_grn,
+    Negative_Red               = neg_red,
+    stringsAsFactors = FALSE
+  )
 
-  median_outliers <- rownames(qc)[qc$mMed < median_intensity_cutoff | qc$uMed < median_intensity_cutoff]
+  # Pass/fail: each control metric compared against negative-control background.
+  # This is a simplified stand-in for Illumina's official per-metric formulas
+  # and numeric thresholds in the BeadArray Controls Reporter Software Guide —
+  # NOT a verified reimplementation of the exact 17-metric spec. If you have
+  # access to the guide's specific thresholds, share them and I will hardcode
+  # the exact formulas instead of this background-comparison approximation.
+  metric_cols <- setdiff(colnames(bcr), c("Sample_ID", "Negative_Grn", "Negative_Red"))
+  fail_matrix <- sapply(metric_cols, function(col) {
+    bg <- if (grepl("Grn$", col)) bcr$Negative_Grn else bcr$Negative_Red
+    bcr[[col]] < bg
+  })
+  bcr$BCR_n_failed <- rowSums(fail_matrix, na.rm = TRUE)
+  bcr$BCR_fail     <- bcr$BCR_n_failed >= 2
 
-  cat(paste(length(median_outliers),
-            'sample(s) flagged as median methylation intensity outliers (<', median_intensity_cutoff, ')',
-            ifelse(length(median_outliers) > 0, paste0(': ', paste(median_outliers, collapse = ', ')), ''),
-            '\n'))
+  ## --- Detection p-value failure rate ---
+  detP      <- minfi::detectionP(WB)
+  detP_rate <- colMeans(detP > probthresh)
 
-  if (length(median_outliers) > 0) {
-    WB <- WB[, !(colnames(WB) %in% median_outliers)]
-  }
+  ## --- Median methylation intensity ---
+  qc <- getQC(preprocessRaw(WB))
 
-  ## --- Step 4: sex prediction check ---
-  cat('## Sample-level QC: predicted sex check\n')
+  ## --- Predicted sex ---
+  sex <- getSex(mapToGenome(preprocessRaw(WB)))
 
-  MSet_raw <- preprocessRaw(WB)
-  GMSet_raw <- mapToGenome(MSet_raw)
-  sex_check <- getSex(GMSet_raw)
-  pData(WB)$predictedSex <- sex_check$predictedSex
+  ## --- Combine into one sample QC table and export ---
+  sampleQC <- data.frame(
+    meta,
+    bcr[, !(colnames(bcr) == "Sample_ID")],
+    detP_fail_rate = detP_rate,
+    detP_fail      = detP_rate > sample_fail_fraction,
+    mMed           = qc$mMed,
+    uMed           = qc$uMed,
+    medianInt_fail = qc$mMed < median_intensity_cutoff | qc$uMed < median_intensity_cutoff,
+    predictedSex   = sex$predictedSex
+  )
+  sampleQC$overall_fail <- with(sampleQC, BCR_fail | detP_fail | medianInt_fail)
 
-  if ("reportedSex" %in% colnames(pData(WB))) {
-    sex_mismatch <- colnames(WB)[pData(WB)$predictedSex != pData(WB)$reportedSex]
-    cat(paste(length(sex_mismatch), 'sample(s) with predicted/reported sex mismatch',
-              ifelse(length(sex_mismatch) > 0, paste0(': ', paste(sex_mismatch, collapse = ', ')), ''),
-              '\n'))
-  } else {
-    cat('No reportedSex column found in pData — predicted sex computed but not compared.\n')
-  }
+  write.csv(sampleQC,
+            paste0(outfilename, "_sampleQC_", ifelse(is_epic, "EPIC", "450k"), ".csv"),
+            row.names = FALSE)
 
-  rm(MSet_raw, GMSet_raw); gc()
+  WB <- WB[, !sampleQC$overall_fail]
+  cat(paste(sum(sampleQC$overall_fail), 'sample(s) excluded;', ncol(WB), 'remain\n'))
 
-  cat(paste('Total samples remaining after all sample-level QC:', ncol(WB), '\n'))
+  rm(ctrlInfo, grn, red, detP, qc, sex); gc()
 
   ######################################################################
   ## Normalization
