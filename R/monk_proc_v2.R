@@ -71,59 +71,17 @@ monk_proc_v2 <- function(WB,
     # Assumes meta row order matches colnames(WB) — verify against your target file.
 
   ## --- 17 BeadArray control metrics, extracted from WB's control probes ---
-  ctrlInfo <- getProbeInfo(WB, type = "Control")
-  grn <- getGreen(WB)[ctrlInfo$Address, , drop = FALSE]
-  red <- getRed(WB)[ctrlInfo$Address, , drop = FALSE]
-  rownames(grn) <- rownames(red) <- ctrlInfo$Type
+  ewas_meth<-read_idats( paste(idatPath, '/',targetfile$Basename,sep=''), quiet=T)
 
-  ctrl_med <- function(type, mat) {
-    rows <- rownames(mat) == type
-    if (!any(rows)) return(rep(NA_real_, ncol(mat)))
-    apply(mat[rows, , drop = FALSE], 2, median, na.rm = TRUE)
-  }
+  cmat = control_metrics(ewas_meth)
+  threshold=t(unlist(lapply(cmat, attributes))) %>% data.frame(.) %>% reshape2::melt(.)
 
-  neg_grn <- ctrl_med("NEGATIVE", grn)
-  neg_red <- ctrl_med("NEGATIVE", red)
 
-  bcr <- data.frame(
-    Sample_ID                = colnames(WB),
-    Staining_Grn              = ctrl_med("STAINING", grn),
-    Staining_Red              = ctrl_med("STAINING", red),
-    Extension_Grn             = ctrl_med("EXTENSION", grn),
-    Extension_Red             = ctrl_med("EXTENSION", red),
-    Hybridization_Grn         = ctrl_med("HYBRIDIZATION", grn),
-    TargetRemoval_Grn         = ctrl_med("TARGET REMOVAL", grn),
-    BisulfiteI_Grn            = ctrl_med("BISULFITE CONVERSION I", grn),
-    BisulfiteI_Red            = ctrl_med("BISULFITE CONVERSION I", red),
-    BisulfiteII_Red           = ctrl_med("BISULFITE CONVERSION II", red),
-    SpecificityI_Grn          = ctrl_med("SPECIFICITY I", grn),
-    SpecificityI_Red          = ctrl_med("SPECIFICITY I", red),
-    SpecificityII_Red         = ctrl_med("SPECIFICITY II", red),
-    NonPolymorphic_Grn        = ctrl_med("NON-POLYMORPHIC", grn),
-    NonPolymorphic_Red        = ctrl_med("NON-POLYMORPHIC", red),
-    Restoration_Grn           = ctrl_med("RESTORATION", grn),
-    Negative_Grn               = neg_grn,
-    Negative_Red               = neg_red,
-    stringsAsFactors = FALSE
-  )
-
-  # Pass/fail: each control metric compared against negative-control background.
-  # This is a simplified stand-in for Illumina's official per-metric formulas
-  # and numeric thresholds in the BeadArray Controls Reporter Software Guide —
-  # NOT a verified reimplementation of the exact 17-metric spec. If you have
-  # access to the guide's specific thresholds, share them and I will hardcode
-  # the exact formulas instead of this background-comparison approximation.
-  metric_cols <- setdiff(colnames(bcr), c("Sample_ID", "Negative_Grn", "Negative_Red"))
-  fail_matrix <- sapply(metric_cols, function(col) {
-    bg <- if (grepl("Grn$", col)) bcr$Negative_Grn else bcr$Negative_Red
-    bcr[[col]] < bg
-  })
-  bcr$BCR_n_failed <- rowSums(fail_matrix, na.rm = TRUE)
-  bcr$BCR_fail     <- bcr$BCR_n_failed >= 2
-
-  ## --- Detection p-value failure rate ---
-  detP      <- minfi::detectionP(WB)
-  detP_rate <- colMeans(detP > probthresh)
+  contromat=data.frame(id=targetfile$Basename,
+#                       failed = targetfile$failed,
+                       failed.count = apply(as.matrix(data.frame(cmat)),1, function(x)sum(x<threshold$value, na.rm=TRUE)),
+                       data.frame(cmat),
+                       indx = 1:nrow(data.frame(cmat)))
 
   ## --- Median methylation intensity ---
   qc <- getQC(preprocessRaw(WB))
@@ -133,16 +91,14 @@ monk_proc_v2 <- function(WB,
 
   ## --- Combine into one sample QC table and export ---
   sampleQC <- data.frame(
-    meta,
-    bcr[, !(colnames(bcr) == "Sample_ID")],
-    detP_fail_rate = detP_rate,
-    detP_fail      = detP_rate > sample_fail_fraction,
+    contromat,
     mMed           = qc$mMed,
     uMed           = qc$uMed,
     medianInt_fail = qc$mMed < median_intensity_cutoff | qc$uMed < median_intensity_cutoff,
-    predictedSex   = sex$predictedSex
+    predictedSex   = sex$predictedSex,
+    sex_pred_fail = targetfile$baby_sex != sex$predictedSex
   )
-  sampleQC$overall_fail <- with(sampleQC, BCR_fail | detP_fail | medianInt_fail)
+  sampleQC$overall_fail <- with(sampleQC, failed.count>2 | sex_pred_fail | medianInt_fail)
 
   write.csv(sampleQC,
             paste0(outfilename, "_sampleQC_", ifelse(is_epic, "EPIC", "450k"), ".csv"),
