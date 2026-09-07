@@ -66,7 +66,7 @@ monk_proc_v2 <- function(WB,
   ######################################################################
   cat('## Sample-level QC\n')
 
-  meta <- read.csv(targetfile, stringsAsFactors = FALSE)
+  meta <- targetfile
 
     # Assumes meta row order matches colnames(WB) — verify against your target file.
 
