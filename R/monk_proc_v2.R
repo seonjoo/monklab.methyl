@@ -221,7 +221,9 @@ monk_proc_v2 <- function(WB,
   PCs <- PCobject$x
 
   cat('# Association between PC1 and array position / chip\n')
-  try(print(oneway.test(PCs[, 1] ~ as.factor(pData(WB.noob)$Sentrix_ID))))
+  # Due to the way the sample was run, we don't have sufficient numbersof chips..
+  #try(print(oneway.test(PCs[, 1] ~ as.factor(pData(WB.noob)$Sentrix_ID))))
+
   try(print(oneway.test(PCs[, 1] ~ as.factor(pData(WB.noob)$array_row))))
   try(print(oneway.test(PCs[, 1] ~ as.factor(pData(WB.noob)$array_col))))
   print(boxplot(PCs[, 1] ~ pData(WB.noob)$array_row, ylab = "PC1", las = 2,
@@ -232,7 +234,7 @@ monk_proc_v2 <- function(WB,
 
   Mvals <- log2(betas.rcp) - log2(1 - betas.rcp)
   Mvals.ComBat <- ComBat(Mvals, batch = pData(WB.noob)$array_rowcol)
-  Mvals.ComBat <- ComBat(Mvals.ComBat, batch = pData(WB.noob)$Sentrix_ID)
+#  Mvals.ComBat <- ComBat(Mvals.ComBat, batch = pData(WB.noob)$Sentrix_ID)
   betas.clean <- 2^Mvals.ComBat / (1 + 2^Mvals.ComBat)
 
   PC_post <- prcomp(t(betas.clean), retx = TRUE, center = TRUE, scale. = TRUE)
@@ -241,10 +243,12 @@ monk_proc_v2 <- function(WB,
           main = "Row (post-correction)", col = rainbow(8))
   boxplot(PC_post$x[, 1] ~ pData(WB.noob)$array_col, ylab = "PC1", las = 2,
           main = "Column (post-correction)", col = rainbow(8))
-  par(mfrow = c(1, 1))
-  print(boxplot(PC_post$x[, 1] ~ pData(WB.noob)$Sentrix_ID, ylab = "PC1", las = 2,
-                main = "Chip (post-correction)", col = rainbow(8)))
-  try(print(oneway.test(PC_post$x[, 1] ~ as.factor(pData(WB.noob)$Sentrix_ID))))
+
+# Due to the way the sample was run, we don't have sufficient numbersof chips..
+#  par(mfrow = c(1, 1))
+#  print(boxplot(PC_post$x[, 1] ~ pData(WB.noob)$Sentrix_ID, ylab = "PC1", las = 2,
+#                main = "Chip (post-correction)", col = rainbow(8)))
+#  try(print(oneway.test(PC_post$x[, 1] ~ as.factor(pData(WB.noob)$Sentrix_ID))))
 
   rm(PCs, PCobject, PC_post, Mvals, Mvals.ComBat); gc()
 
