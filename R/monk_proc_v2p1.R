@@ -37,7 +37,7 @@
 #' #monk_proc_v2(idatpath,targetfile,probthresh=0.01,outfilename='monkproc_v2_test')
 
 
-monk_proc_v2 <- function(WB,
+monk_proc_v2p1 <- function(WB,
                          idatpath = NULL,
                          targetfile = NULL,
                          probthresh = 0.01,
@@ -48,7 +48,7 @@ monk_proc_v2 <- function(WB,
                          rmXY = FALSE,
                          sample_fail_fraction = 0.05,
                          median_intensity_cutoff = 10.5,
-                         outfilename = 'monkproc_v2'
+                         outfilename = 'monkproc_v2p1'
 ){
 
   ######################################################################
@@ -233,7 +233,8 @@ monk_proc_v2 <- function(WB,
   # the exposure/outcome variable(s) of interest for this analysis.
 
   Mvals <- log2(betas.rcp) - log2(1 - betas.rcp)
-  Mvals.ComBat <- ComBat(Mvals, batch = pData(WB.noob)$array_rowcol)
+  Mvals.ComBat <- ComBat(Mvals, batch = pData(WB.noob)$array_row)
+#  Mvals.ComBat <- ComBat(Mvals, batch = pData(WB.noob)$array_rowcol)
 #  Mvals.ComBat <- ComBat(Mvals.ComBat, batch = pData(WB.noob)$Sentrix_ID)
   betas.clean <- 2^Mvals.ComBat / (1 + 2^Mvals.ComBat)
 
